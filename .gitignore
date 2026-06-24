@@ -1,0 +1,12 @@
+# Clés Supabase — ne jamais committer
+js/config.js
+
+# Guide déploiement local (contient infos perso)
+DEPLOY.md
+
+# Système
+.DS_Store
+Thumbs.db
+
+# Éditeur (optionnel)
+.vscode/
