@@ -210,11 +210,14 @@ async function navigate(page) {
 function closeSidebar() {
   document.getElementById('sidebar')?.classList.remove('mobile-open');
   document.getElementById('sidebar-backdrop')?.classList.add('hidden');
+  document.body.classList.remove('sidebar-open');
 }
 
 function openSidebar() {
+  if (window.matchMedia('(min-width: 1024px)').matches) return;
   document.getElementById('sidebar')?.classList.add('mobile-open');
   document.getElementById('sidebar-backdrop')?.classList.remove('hidden');
+  document.body.classList.add('sidebar-open');
 }
 
 function initRouter() {
@@ -261,12 +264,19 @@ function initUI() {
     if (e.target === e.currentTarget) closeModal();
   });
 
-  document.getElementById('menu-toggle')?.addEventListener('click', () => {
+  document.getElementById('menu-toggle')?.addEventListener('click', (e) => {
+    e.stopPropagation();
     const sidebar = document.getElementById('sidebar');
     if (sidebar?.classList.contains('mobile-open')) {
       closeSidebar();
     } else {
       openSidebar();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      closeSidebar();
     }
   });
 

@@ -26,7 +26,6 @@ body {
   display: flex;
   flex-direction: column;
   width: 16rem;
-  max-width: 85vw;
   background-color: #161b22;
   border-right: 1px solid #2d3748;
   flex-shrink: 0;
@@ -84,16 +83,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   padding: 0;
-  border: 1px solid #2d3748;
+  border: 1px solid #4b5563;
   border-radius: 0.5rem;
   background-color: #1c2333;
-  color: #e5e7eb;
+  color: #f3f4f6;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background-color 0.15s, color 0.15s;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .menu-toggle:hover,
@@ -106,8 +106,9 @@ body {
 .sidebar-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  z-index: 40;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 45;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .sidebar-backdrop.hidden {
@@ -133,25 +134,54 @@ body {
 }
 
 @media (max-width: 1023px) {
+  /* Block layout : évite le bug Safari où fixed dans flex garde sa place */
+  .app-shell {
+    display: block;
+    position: relative;
+  }
+
+  .app-main {
+    width: 100%;
+    height: 100dvh;
+    height: 100vh;
+  }
+
   .app-sidebar {
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
+    width: min(17rem, 88vw);
     z-index: 50;
-    transform: translateX(-100%);
-    transition: transform 0.28s ease;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translate3d(-100%, 0, 0);
+    transition: transform 0.28s ease, visibility 0.28s ease, box-shadow 0.28s ease;
     box-shadow: none;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
 
   .app-sidebar.mobile-open {
-    transform: translateX(0);
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+    visibility: visible;
+    pointer-events: auto;
+    transform: translate3d(0, 0, 0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.55);
+  }
+
+  .app-header {
+    position: relative;
+    z-index: 10;
   }
 
   .header-actions {
     flex-shrink: 0;
   }
+}
+
+body.sidebar-open {
+  overflow: hidden;
+  touch-action: none;
 }
 
 @media (min-width: 640px) and (max-width: 1023px) {
@@ -835,8 +865,8 @@ body.has-config-banner.has-offline-banner #offline-banner {
   }
 
   .menu-toggle {
-    width: 2.375rem;
-    height: 2.375rem;
+    width: 2.75rem;
+    height: 2.75rem;
   }
 
   .card,
