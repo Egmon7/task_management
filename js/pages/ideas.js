@@ -17,7 +17,7 @@ export async function render() {
   `;
 
   if (ideas.length === 0) {
-    return emptyState('light-bulb', 'Aucune idée', 'Capturez rapidement vos idées d\'applications.');
+    return `<div class="page-inner">${emptyState('light-bulb', 'Aucune idée', 'Capturez rapidement vos idées d\'applications.')}</div>`;
   }
 
   const sorted = [...ideas].sort((a, b) => {
@@ -26,8 +26,10 @@ export async function render() {
   });
 
   return `
+    <div class="page-inner">
     <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
       ${sorted.map(i => ideaCard(i)).join('')}
+    </div>
     </div>
   `;
 }

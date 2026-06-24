@@ -24,6 +24,7 @@ export async function render() {
   const categories = [...new Set(templates.map(t => t.category).filter(Boolean))];
 
   return `
+    <div class="page-inner">
     ${categories.length > 0 ? `
       <div class="flex flex-wrap gap-2 mb-6">
         <button class="tag cursor-pointer filter-cat ${!filterCategory ? 'ring-1 ring-accent' : ''}" data-cat="">Tous</button>
@@ -39,6 +40,7 @@ export async function render() {
           ${filtered.map(t => templateCard(t)).join('')}
         </div>`
     }
+    </div>
   `;
 }
 

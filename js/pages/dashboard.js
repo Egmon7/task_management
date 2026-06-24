@@ -3,6 +3,7 @@ import { formatCurrency, formatDate, statusBadge, escapeHtml, deadlineBadge } fr
 import { icon } from '../icons.js';
 
 const STATUS_CHART = [
+  { key: 'debut', label: 'Début', color: '#a78bfa' },
   { key: 'en_cours', label: 'En cours', color: '#60a5fa' },
   { key: 'termine', label: 'Terminés', color: '#4ade80' },
   { key: 'en_pause', label: 'En pause', color: '#facc15' },
@@ -18,8 +19,9 @@ export async function render() {
   const enPause = projects.filter(p => p.status === 'en_pause').length;
   const revenus = projects.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
 
+  const tasksAFaire = tasks.filter(t => t.status === 'a_faire').length;
+  const tasksEnCours = tasks.filter(t => t.status === 'en_cours').length;
   const tasksTerminees = tasks.filter(t => t.status === 'termine').length;
-  const progression = tasks.length > 0 ? Math.round((tasksTerminees / tasks.length) * 100) : 0;
 
   const activeProject = projects.find(p => p.is_active);
   const recentProjects = projects.slice(0, 5);
@@ -35,16 +37,24 @@ export async function render() {
     .slice(0, 5);
 
   return `
-    <div class="space-y-6">
+    <div class="page-inner space-y-6">
       ${activeProject ? activeProjectCard(activeProject) : ''}
 
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 dashboard-stats">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 dashboard-stats">
         ${statCard('Total projets', total, 'folder', 'text-white', 'text-gray-400')}
         ${statCard('En cours', enCours, 'refresh', 'text-blue-400', 'text-blue-400')}
         ${statCard('Terminés', termines, 'check-circle', 'text-green-400', 'text-green-400')}
         ${statCard('En pause', enPause, 'pause', 'text-yellow-400', 'text-yellow-400')}
         ${statCard('Revenus', formatCurrency(revenus), 'currency', 'text-accent-hover', 'text-accent-hover')}
-        ${statCard('Progression', progression + '%', 'chart-bar', 'text-purple-400', 'text-purple-400')}
+      </div>
+
+      <div class="card">
+        <h3 class="text-sm font-semibold text-white mb-4">Résumé des tâches</h3>
+        <div class="grid grid-cols-3 gap-3 sm:gap-4">
+          ${taskStat('À faire', tasksAFaire, 'a_faire', 'text-gray-300', 'clipboard')}
+          ${taskStat('En cours', tasksEnCours, 'en_cours', 'text-blue-400', 'refresh')}
+          ${taskStat('Terminées', tasksTerminees, 'termine', 'text-green-400', 'check-circle')}
+        </div>
       </div>
 
       <div class="grid lg:grid-cols-2 gap-6">
@@ -67,16 +77,6 @@ export async function render() {
                 </div>
               `).join('')}</div>`
           }
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-sm font-medium text-gray-300">Progression globale des tâches</h3>
-          <span class="text-sm text-gray-500">${tasksTerminees} / ${tasks.length} tâches</span>
-        </div>
-        <div class="progress-bar">
-          <div class="progress-fill" style="width: ${progression}%"></div>
         </div>
       </div>
 
@@ -139,6 +139,7 @@ export function bindEvents() {
 }
 
 function activeProjectCard(p) {
+  const prog = p.progress || 0;
   return `
     <div class="card active-project-card border-accent/40 bg-accent/5">
       <div class="flex items-start justify-between gap-4">
@@ -150,6 +151,15 @@ function activeProjectCard(p) {
           <h3 class="text-lg font-semibold text-white truncate">${escapeHtml(p.name)}</h3>
           <p class="text-sm text-gray-400 mt-1">${escapeHtml(p.client_name) || 'Sans client'} · ${escapeHtml(p.category) || 'Sans catégorie'}</p>
           ${p.deadline ? `<p class="text-xs text-gray-500 mt-2">Échéance : ${formatDate(p.deadline)}</p>` : ''}
+          <div class="mt-3">
+            <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
+              <span>Avancement</span>
+              <span>${prog}%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: ${prog}%"></div>
+            </div>
+          </div>
         </div>
         <div class="flex flex-col items-end gap-2 shrink-0">
           ${statusBadge(p.status)}
@@ -194,6 +204,19 @@ function statCard(label, value, iconName, colorClass, iconColorClass) {
         ${icon(iconName, `w-5 h-5 shrink-0 ${iconColorClass}`)}
       </div>
       <p class="text-xl sm:text-2xl font-bold ${colorClass} stat-value">${value}</p>
+    </div>
+  `;
+}
+
+function taskStat(label, count, statusKey, colorClass, iconName) {
+  return `
+    <div class="stat-card text-center sm:text-left">
+      <div class="flex items-center justify-center sm:justify-between mb-1">
+        <span class="text-xs text-gray-500 font-medium">${label}</span>
+        ${icon(iconName, `w-4 h-4 shrink-0 hidden sm:block ${colorClass}`)}
+      </div>
+      <p class="text-2xl font-bold ${colorClass}">${count}</p>
+      ${statusBadge(statusKey)}
     </div>
   `;
 }

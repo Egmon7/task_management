@@ -1,4 +1,5 @@
 const STATUS_LABELS = {
+  debut: 'Début',
   en_cours: 'En cours',
   termine: 'Terminé',
   en_pause: 'En pause',
@@ -119,6 +120,56 @@ export function closeModal() {
 }
 
 import { icon } from './icons.js';
+
+export function searchBar(id, placeholder = 'Rechercher…') {
+  return `
+    <div class="search-bar-wrap">
+      <svg class="search-bar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <input type="search" id="${id}" class="input-field search-bar" placeholder="${placeholder}" autocomplete="off">
+    </div>
+  `;
+}
+
+export function progressControl(name, value = 0) {
+  const v = Math.min(100, Math.max(0, parseInt(value, 10) || 0));
+  const steps = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+  return `
+    <div class="progress-control" data-progress-control>
+      <div class="flex items-center justify-between mb-2">
+        <label class="label-field mb-0">Avancement du projet</label>
+        <span class="progress-value text-sm font-semibold text-accent-hover">${v}%</span>
+      </div>
+      <input type="range" class="progress-slider" name="${name}" min="0" max="100" step="10" value="${v}">
+      <div class="progress-presets">
+        ${steps.map(s => `
+          <button type="button" class="progress-preset ${s === v ? 'active' : ''}" data-value="${s}">${s}%</button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+export function bindProgressControl(root = document) {
+  root.querySelectorAll('[data-progress-control]').forEach(ctrl => {
+    const slider = ctrl.querySelector('.progress-slider');
+    const valueEl = ctrl.querySelector('.progress-value');
+    const presets = ctrl.querySelectorAll('.progress-preset');
+
+    const sync = (val) => {
+      const n = Math.min(100, Math.max(0, parseInt(val, 10) || 0));
+      slider.value = n;
+      if (valueEl) valueEl.textContent = `${n}%`;
+      presets.forEach(btn => btn.classList.toggle('active', parseInt(btn.dataset.value, 10) === n));
+    };
+
+    slider?.addEventListener('input', () => sync(slider.value));
+    presets.forEach(btn => {
+      btn.addEventListener('click', () => sync(btn.dataset.value));
+    });
+  });
+}
 
 export function emptyState(iconName, title, subtitle = '') {
   return `

@@ -27,6 +27,7 @@ export async function render() {
     : notes;
 
   return `
+    <div class="page-inner">
     <div class="flex flex-wrap gap-2 mb-6">
       <button class="tag cursor-pointer filter-note-type ${!filterType ? 'ring-1 ring-accent' : ''}" data-type="">Tous</button>
       ${Object.entries(NOTE_TYPES).map(([k, v]) => `
@@ -40,6 +41,7 @@ export async function render() {
           ${filtered.map(n => noteCard(n)).join('')}
         </div>`
     }
+    </div>
   `;
 }
 

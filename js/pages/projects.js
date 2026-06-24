@@ -2,13 +2,18 @@ import * as db from '../db.js';
 import {
   formatCurrency, formatDate, statusBadge, escapeHtml, deadlineBadge,
   openModal, closeModal, showToast, emptyState, STATUS_LABELS,
+  searchBar, progressControl, bindProgressControl,
 } from '../utils.js';
 import { icon } from '../icons.js';
 
 let projects = [];
+let searchQuery = '';
+
+const PROJECT_STATUSES = ['debut', 'en_cours', 'termine', 'en_pause', 'abandonne'];
 
 export async function render() {
   projects = await db.getProjects();
+  searchQuery = '';
 
   document.getElementById('header-actions').innerHTML = `
     <button id="btn-new-project" class="btn-primary">
@@ -18,18 +23,47 @@ export async function render() {
   `;
 
   if (projects.length === 0) {
-    return emptyState('folder', 'Aucun projet', 'Créez votre premier projet pour commencer.');
+    return `<div class="page-inner">${emptyState('folder', 'Aucun projet', 'Créez votre premier projet pour commencer.')}</div>`;
   }
 
   return `
+    <div class="page-inner page-inner--scroll">
+      ${searchBar('project-search', 'Rechercher un projet…')}
+      <div class="projects-list" id="projects-list">
+        ${projectGrid(projects)}
+      </div>
+    </div>
+  `;
+}
+
+function filterProjects(list, query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return list;
+  return list.filter(p =>
+    (p.name || '').toLowerCase().includes(q) ||
+    (p.client_name || '').toLowerCase().includes(q) ||
+    (p.category || '').toLowerCase().includes(q) ||
+    (p.description || '').toLowerCase().includes(q) ||
+    (p.estimation || '').toLowerCase().includes(q) ||
+    (p.technologies || []).some(t => t.toLowerCase().includes(q))
+  );
+}
+
+function projectGrid(list) {
+  const filtered = filterProjects(list, searchQuery);
+  if (filtered.length === 0) {
+    return '<p class="text-gray-500 text-sm text-center py-8">Aucun projet ne correspond à votre recherche.</p>';
+  }
+  return `
     <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-      ${projects.map(p => projectCard(p)).join('')}
+      ${filtered.map(p => projectCard(p)).join('')}
     </div>
   `;
 }
 
 function projectCard(p) {
   const techs = (p.technologies || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join(' ');
+  const prog = p.progress || 0;
   return `
     <div class="card hover:border-accent/30 transition-colors cursor-pointer project-card ${p.is_active ? 'ring-1 ring-accent/50' : ''}" data-id="${p.id}">
       <div class="flex items-start justify-between mb-3 gap-2">
@@ -43,11 +77,21 @@ function projectCard(p) {
         ${statusBadge(p.status)}
       </div>
       ${p.description ? `<p class="text-sm text-gray-400 mb-3 line-clamp-2">${escapeHtml(p.description)}</p>` : ''}
+      <div class="mb-3">
+        <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
+          <span>Avancement</span>
+          <span class="text-accent-hover font-medium">${prog}%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: ${prog}%"></div>
+        </div>
+      </div>
       <div class="flex flex-wrap gap-1 mb-3">${techs}</div>
-      <div class="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-surface-border gap-2">
+      <div class="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-surface-border gap-2 flex-wrap">
         <span>Modifié · ${formatDate(p.updated_at || p.created_at)}</span>
-        <div class="flex items-center gap-2 shrink-0">
+        <div class="flex items-center gap-2 shrink-0 flex-wrap justify-end">
           ${p.deadline ? deadlineBadge(p.deadline) : ''}
+          ${p.estimation ? `<span class="text-gray-400">Est. ${escapeHtml(p.estimation)}</span>` : ''}
           <span class="text-accent-hover font-medium">${formatCurrency(p.amount)}</span>
         </div>
       </div>
@@ -55,11 +99,25 @@ function projectCard(p) {
   `;
 }
 
-export function bindEvents() {
-  document.getElementById('btn-new-project')?.addEventListener('click', () => showProjectForm());
+function bindProjectCards() {
   document.querySelectorAll('.project-card').forEach(card => {
     card.addEventListener('click', () => showProjectDetail(card.dataset.id));
   });
+}
+
+export function bindEvents() {
+  document.getElementById('btn-new-project')?.addEventListener('click', () => showProjectForm());
+
+  document.getElementById('project-search')?.addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    const listEl = document.getElementById('projects-list');
+    if (listEl) {
+      listEl.innerHTML = projectGrid(projects);
+      bindProjectCards();
+    }
+  });
+
+  bindProjectCards();
 
   document.querySelectorAll('.open-active-project').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -104,27 +162,40 @@ function showProjectForm(project = null) {
           <div>
             <label class="label-field">État</label>
             <select class="select-field" name="status">
-              ${Object.entries(STATUS_LABELS).filter(([k]) => ['en_cours','termine','en_pause','abandonne'].includes(k)).map(([k, v]) =>
-                `<option value="${k}" ${project?.status === k ? 'selected' : ''}>${v}</option>`
+              ${PROJECT_STATUSES.map(k =>
+                `<option value="${k}" ${(project?.status || 'debut') === k ? 'selected' : ''}>${STATUS_LABELS[k]}</option>`
               ).join('')}
             </select>
           </div>
           <div>
-            <label class="label-field">Montant (€)</label>
-            <input class="input-field" name="amount" type="number" step="0.01" value="${project?.amount || 0}">
+            <label class="label-field">Estimation</label>
+            <input class="input-field" name="estimation" value="${escapeHtml(project?.estimation || '')}" placeholder="Ex: 500 € ou pas défini">
           </div>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
+            <label class="label-field">Prix final (€)</label>
+            <input class="input-field input-field-compact" name="amount" type="number" step="0.01" value="${project?.amount || 0}">
+          </div>
+          <div>
             <label class="label-field">Échéance</label>
-            <input class="input-field" name="deadline" type="date" value="${deadline}">
+            <input class="input-field input-field-compact" name="deadline" type="date" value="${deadline}">
           </div>
-          <div class="flex items-end pb-1">
-            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-              <input type="checkbox" name="is_active" class="rounded border-surface-border" ${project?.is_active ? 'checked' : ''}>
-              Projet actif
-            </label>
-          </div>
+        </div>
+        <div>
+          <label class="label-field">Lien du projet</label>
+          <input class="input-field" name="live_url" type="url" value="${escapeHtml(project?.live_url || '')}" placeholder="https://monsite.com">
+        </div>
+        <div>
+          <label class="label-field">Lien GitHub</label>
+          <input class="input-field" name="github_url" type="url" value="${escapeHtml(project?.github_url || '')}" placeholder="https://github.com/...">
+        </div>
+        ${progressControl('progress', project?.progress || 0)}
+        <div class="flex items-center gap-2">
+          <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+            <input type="checkbox" name="is_active" class="rounded border-surface-border" ${project?.is_active ? 'checked' : ''}>
+            Projet actif
+          </label>
         </div>
         <div>
           <label class="label-field">Technologies (séparées par des virgules)</label>
@@ -138,6 +209,8 @@ function showProjectForm(project = null) {
     `
   );
 
+  bindProgressControl(document.getElementById('modal-body'));
+
   document.getElementById('btn-save-project').addEventListener('click', async () => {
     const form = document.getElementById('project-form');
     const fd = new FormData(form);
@@ -147,8 +220,12 @@ function showProjectForm(project = null) {
       category: fd.get('category'),
       description: fd.get('description'),
       status: fd.get('status'),
+      estimation: fd.get('estimation') || '',
       amount: parseFloat(fd.get('amount')) || 0,
       deadline: fd.get('deadline') || null,
+      live_url: fd.get('live_url') || '',
+      github_url: fd.get('github_url') || '',
+      progress: parseInt(fd.get('progress'), 10) || 0,
       technologies: fd.get('technologies').split(',').map(t => t.trim()).filter(Boolean),
     };
 
@@ -177,6 +254,7 @@ function showProjectForm(project = null) {
 async function showProjectDetail(id) {
   const project = await db.getProject(id);
   const logs = await db.getProjectLogs(id);
+  const prog = project.progress || 0;
 
   openModal(
     escapeHtml(project.name),
@@ -189,13 +267,29 @@ async function showProjectDetail(id) {
           ${project.deadline ? deadlineBadge(project.deadline) : ''}
         </div>
 
+        <div>
+          <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <span>Avancement</span>
+            <span class="text-accent-hover font-semibold" id="detail-progress-label">${prog}%</span>
+          </div>
+          <div class="progress-bar mb-2">
+            <div class="progress-fill" id="detail-progress-bar" style="width: ${prog}%"></div>
+          </div>
+          <div id="detail-progress-control">
+            ${progressControl('detail_progress', prog)}
+          </div>
+        </div>
+
         <div class="grid grid-cols-2 gap-4 text-sm">
           <div><span class="text-gray-500">Client</span><p class="text-gray-200">${escapeHtml(project.client_name) || '—'}</p></div>
           <div><span class="text-gray-500">Créé le</span><p class="text-gray-200">${formatDate(project.created_at)}</p></div>
           <div><span class="text-gray-500">Dernière activité</span><p class="text-gray-200">${formatDate(project.updated_at || project.created_at)}</p></div>
           <div><span class="text-gray-500">Échéance</span><p class="text-gray-200">${project.deadline ? formatDate(project.deadline) : '—'}</p></div>
-          <div><span class="text-gray-500">Montant</span><p class="text-accent-hover font-medium">${formatCurrency(project.amount)}</p></div>
-          <div><span class="text-gray-500">Technologies</span><p class="text-gray-200">${(project.technologies || []).join(', ') || '—'}</p></div>
+          <div><span class="text-gray-500">Estimation</span><p class="text-gray-200">${escapeHtml(project.estimation) || '—'}</p></div>
+          <div><span class="text-gray-500">Prix final</span><p class="text-accent-hover font-medium">${formatCurrency(project.amount)}</p></div>
+          <div class="col-span-2"><span class="text-gray-500">Technologies</span><p class="text-gray-200">${(project.technologies || []).join(', ') || '—'}</p></div>
+          ${project.live_url ? `<div class="col-span-2"><span class="text-gray-500">Lien du projet</span><p><a href="${escapeHtml(project.live_url)}" target="_blank" rel="noopener" class="text-accent-hover text-sm break-all">${escapeHtml(project.live_url)}</a></p></div>` : ''}
+          ${project.github_url ? `<div class="col-span-2"><span class="text-gray-500">GitHub</span><p><a href="${escapeHtml(project.github_url)}" target="_blank" rel="noopener" class="text-accent-hover text-sm break-all">${escapeHtml(project.github_url)}</a></p></div>` : ''}
         </div>
 
         ${project.description ? `<div><span class="text-gray-500 text-sm">Description</span><p class="text-gray-300 text-sm mt-1">${escapeHtml(project.description)}</p></div>` : ''}
@@ -231,6 +325,23 @@ async function showProjectDetail(id) {
       <button class="btn-primary" id="btn-close-detail">Fermer</button>
     `
   );
+
+  bindProgressControl(document.getElementById('detail-progress-control'));
+  const detailSlider = document.querySelector('#detail-progress-control .progress-slider');
+  let saveProgressTimer = null;
+  detailSlider?.addEventListener('input', () => {
+    const val = parseInt(detailSlider.value, 10) || 0;
+    document.getElementById('detail-progress-label').textContent = `${val}%`;
+    document.getElementById('detail-progress-bar').style.width = `${val}%`;
+    clearTimeout(saveProgressTimer);
+    saveProgressTimer = setTimeout(async () => {
+      try {
+        await db.updateProject(id, { progress: val });
+      } catch (e) {
+        showToast('Erreur avancement : ' + e.message, 'error');
+      }
+    }, 400);
+  });
 
   document.getElementById('btn-close-detail').addEventListener('click', closeModal);
   document.getElementById('btn-edit-project').addEventListener('click', () => {

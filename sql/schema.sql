@@ -4,6 +4,7 @@
 -- Si vos tables existent déjà :
 --   1. migration_v3.sql  (user_id, RLS, progress, github_url, live_url…)
 --   2. migration_v2.sql  (deadline, is_active, pinned — fonctionnalités app)
+--   3. migration_v4.sql  (statut début, champ estimation)
 -- Ne ré-exécutez PAS ce fichier sur une base déjà peuplée.
 
 -- Projets
@@ -18,7 +19,8 @@ CREATE TABLE IF NOT EXISTS projects (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   deadline DATE,
   is_active BOOLEAN DEFAULT false,
-  status TEXT DEFAULT 'en_cours' CHECK (status IN ('en_cours', 'termine', 'en_pause', 'abandonne')),
+  status TEXT DEFAULT 'debut' CHECK (status IN ('debut', 'en_cours', 'termine', 'en_pause', 'abandonne')),
+  estimation TEXT DEFAULT '',
   amount NUMERIC(10, 2) DEFAULT 0,
   progress INTEGER DEFAULT 0 CHECK (progress BETWEEN 0 AND 100),
   github_url TEXT DEFAULT '',

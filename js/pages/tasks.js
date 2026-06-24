@@ -1,11 +1,12 @@
 import * as db from '../db.js';
 import {
-  escapeHtml, openModal, closeModal, showToast, emptyState, STATUS_LABELS,
+  escapeHtml, openModal, closeModal, showToast, emptyState, searchBar,
 } from '../utils.js';
 import { icon } from '../icons.js';
 
 let tasks = [];
 let projects = [];
+let searchQuery = '';
 
 const COLUMNS = [
   { key: 'a_faire', label: 'À faire', color: 'border-gray-500' },
@@ -15,6 +16,7 @@ const COLUMNS = [
 
 export async function render() {
   [tasks, projects] = await Promise.all([db.getTasks(), db.getProjects()]);
+  searchQuery = '';
 
   document.getElementById('header-actions').innerHTML = `
     <button id="btn-new-task" class="btn-primary">
@@ -24,29 +26,46 @@ export async function render() {
   `;
 
   if (tasks.length === 0) {
-    return emptyState('clipboard-check', 'Aucune tâche', 'Créez votre première tâche pour organiser votre travail.');
+    return `<div class="page-inner">${emptyState('clipboard-check', 'Aucune tâche', 'Créez votre première tâche pour organiser votre travail.')}</div>`;
   }
 
   return `
-    <div class="kanban-board">
-      ${COLUMNS.map(col => `
-        <div class="kanban-column" data-status="${col.key}">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-sm font-semibold text-gray-300 flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full ${col.color.replace('border-', 'bg-')}"></span>
-              ${col.label}
-            </h3>
-            <span class="text-xs text-gray-500 bg-surface px-2 py-0.5 rounded-full">
-              ${tasks.filter(t => t.status === col.key).length}
-            </span>
-          </div>
-          <div class="space-y-2 task-drop-zone" data-status="${col.key}">
-            ${tasks.filter(t => t.status === col.key).map(t => taskCard(t)).join('')}
-          </div>
-        </div>
-      `).join('')}
+    <div class="page-inner">
+      ${searchBar('task-search', 'Rechercher une tâche…')}
+      <div id="kanban-board" class="kanban-board">
+        ${kanbanHtml(tasks)}
+      </div>
     </div>
   `;
+}
+
+function filterTasks(list, query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return list;
+  return list.filter(t =>
+    (t.title || '').toLowerCase().includes(q) ||
+    (t.projects?.name || '').toLowerCase().includes(q)
+  );
+}
+
+function kanbanHtml(list) {
+  const filtered = filterTasks(list, searchQuery);
+  return COLUMNS.map(col => `
+    <div class="kanban-column" data-status="${col.key}">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-gray-300 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full ${col.color.replace('border-', 'bg-')}"></span>
+          ${col.label}
+        </h3>
+        <span class="text-xs text-gray-500 bg-surface px-2 py-0.5 rounded-full">
+          ${filtered.filter(t => t.status === col.key).length}
+        </span>
+      </div>
+      <div class="space-y-2 task-drop-zone" data-status="${col.key}">
+        ${filtered.filter(t => t.status === col.key).map(t => taskCard(t)).join('')}
+      </div>
+    </div>
+  `).join('');
 }
 
 function taskCard(t) {
@@ -62,9 +81,16 @@ function taskCard(t) {
   `;
 }
 
-export function bindEvents() {
-  document.getElementById('btn-new-task')?.addEventListener('click', () => showTaskForm());
+function refreshKanban() {
+  const board = document.getElementById('kanban-board');
+  if (board) {
+    board.innerHTML = kanbanHtml(tasks);
+    bindTaskActions();
+    setupDragAndDrop();
+  }
+}
 
+function bindTaskActions() {
   document.querySelectorAll('.edit-task').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -86,7 +112,17 @@ export function bindEvents() {
       }
     });
   });
+}
 
+export function bindEvents() {
+  document.getElementById('btn-new-task')?.addEventListener('click', () => showTaskForm());
+
+  document.getElementById('task-search')?.addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    refreshKanban();
+  });
+
+  bindTaskActions();
   setupDragAndDrop();
 }
 
