@@ -214,6 +214,37 @@ export async function deleteAppIdea(id) {
   return query(getClient().from('app_ideas').delete().eq('id', id));
 }
 
+// ─── Profil personnel (À propos) ───────────────────────────
+
+export async function getUserProfile() {
+  const client = getClient();
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) return null;
+
+  const rows = await query(
+    client.from('user_profiles').select('*').eq('user_id', user.id).maybeSingle()
+  );
+  return rows;
+}
+
+export async function saveUserProfile(profile) {
+  const client = getClient();
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) throw new Error('Non connecté');
+
+  const data = { ...profile, user_id: user.id, updated_at: touchTimestamp() };
+  const existing = await getUserProfile();
+
+  if (existing?.id) {
+    return query(
+      client.from('user_profiles').update(data).eq('id', existing.id).select().single()
+    );
+  }
+  return query(
+    client.from('user_profiles').insert(data).select().single()
+  );
+}
+
 function sortPinnedFirst(items) {
   return [...items].sort((a, b) => {
     if (a.pinned && !b.pinned) return -1;

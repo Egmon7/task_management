@@ -11,6 +11,7 @@ import * as templates from './pages/templates.js';
 import * as resources from './pages/resources.js';
 import * as notes from './pages/notes.js';
 import * as ideas from './pages/ideas.js';
+import * as about from './pages/about.js';
 
 const PAGES = {
   dashboard: { module: dashboard, title: 'Dashboard' },
@@ -20,6 +21,7 @@ const PAGES = {
   resources: { module: resources, title: 'Ressources' },
   notes: { module: notes, title: 'Notes techniques' },
   ideas: { module: ideas, title: 'Idées d\'applications' },
+  about: { module: about, title: 'À propos' },
 };
 
 let appInitialized = false;
@@ -234,7 +236,13 @@ function initRouter() {
   });
 
   window.addEventListener('navigate', (e) => {
-    window.location.hash = e.detail;
+    const page = e.detail;
+    const current = window.location.hash.slice(1) || 'dashboard';
+    if (page === current) {
+      navigate(page);
+    } else {
+      window.location.hash = page;
+    }
   });
 
   window.addEventListener('open-project', (e) => {

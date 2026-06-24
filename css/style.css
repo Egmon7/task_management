@@ -367,6 +367,33 @@ body.sidebar-open {
   pointer-events: none;
 }
 
+.filter-status {
+  cursor: pointer;
+  transition: box-shadow 0.15s, background-color 0.15s;
+}
+
+.about-section-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #2d3748;
+}
+
+.photo-preview img {
+  max-width: 100%;
+  max-height: 12rem;
+  border-radius: 0.5rem;
+  border: 1px solid #2d3748;
+  object-fit: contain;
+  background-color: #0f1117;
+}
+
+.photo-input {
+  font-size: 0.875rem;
+}
+
 .search-bar {
   padding-left: 2.25rem;
 }

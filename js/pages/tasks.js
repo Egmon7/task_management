@@ -16,7 +16,6 @@ const COLUMNS = [
 
 export async function render() {
   [tasks, projects] = await Promise.all([db.getTasks(), db.getProjects()]);
-  searchQuery = '';
 
   document.getElementById('header-actions').innerHTML = `
     <button id="btn-new-task" class="btn-primary">
@@ -31,7 +30,7 @@ export async function render() {
 
   return `
     <div class="page-inner">
-      ${searchBar('task-search', 'Rechercher une tâche…')}
+      ${searchBar('task-search', 'Rechercher une tâche…', searchQuery)}
       <div id="kanban-board" class="kanban-board">
         ${kanbanHtml(tasks)}
       </div>

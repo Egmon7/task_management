@@ -119,15 +119,67 @@ export function closeModal() {
   document.getElementById('modal-overlay').classList.add('hidden');
 }
 
+/** Recharge la page courante sans changer l’URL (après création / modification). */
+export function refreshPage(page) {
+  const target = page || window.location.hash.slice(1) || 'dashboard';
+  window.dispatchEvent(new CustomEvent('navigate', { detail: target }));
+}
+
+export function readImageFile(file, maxWidth = 900) {
+  return new Promise((resolve, reject) => {
+    if (!file?.type?.startsWith('image/')) {
+      reject(new Error('Fichier image requis'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width;
+        let h = img.height;
+        if (w > maxWidth) {
+          h = Math.round((maxWidth / w) * h);
+          w = maxWidth;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.78));
+      };
+      img.onerror = () => reject(new Error('Image illisible'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Lecture du fichier impossible'));
+    reader.readAsDataURL(file);
+  });
+}
+
+export function imagePreviewField(id, label, currentUrl = '') {
+  const hasImage = !!currentUrl;
+  return `
+    <div class="photo-field" data-photo-field="${id}">
+      <label class="label-field">${label}</label>
+      <input type="file" accept="image/*" class="input-field photo-input" id="${id}-file" data-target="${id}">
+      ${hasImage ? `
+        <div class="photo-preview mt-2" id="${id}-preview">
+          <img src="${currentUrl}" alt="${escapeHtml(label)}">
+          <button type="button" class="btn-ghost text-xs text-red-400 mt-1 remove-photo" data-target="${id}">Supprimer la photo</button>
+        </div>
+      ` : `<div class="photo-preview mt-2 hidden" id="${id}-preview"></div>`}
+    </div>
+  `;
+}
+
 import { icon } from './icons.js';
 
-export function searchBar(id, placeholder = 'Rechercher…') {
+export function searchBar(id, placeholder = 'Rechercher…', value = '') {
   return `
     <div class="search-bar-wrap">
       <svg class="search-bar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
       </svg>
-      <input type="search" id="${id}" class="input-field search-bar" placeholder="${placeholder}" autocomplete="off">
+      <input type="search" id="${id}" class="input-field search-bar" placeholder="${placeholder}" value="${escapeHtml(value)}" autocomplete="off">
     </div>
   `;
 }

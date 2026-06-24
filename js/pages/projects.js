@@ -8,12 +8,12 @@ import { icon } from '../icons.js';
 
 let projects = [];
 let searchQuery = '';
+let statusFilter = '';
 
 const PROJECT_STATUSES = ['debut', 'en_cours', 'termine', 'en_pause', 'abandonne'];
 
 export async function render() {
   projects = await db.getProjects();
-  searchQuery = '';
 
   document.getElementById('header-actions').innerHTML = `
     <button id="btn-new-project" class="btn-primary">
@@ -28,12 +28,32 @@ export async function render() {
 
   return `
     <div class="page-inner page-inner--scroll">
-      ${searchBar('project-search', 'Rechercher un projet…')}
+      ${searchBar('project-search', 'Rechercher un projet…', searchQuery)}
+      ${statusFilterBar()}
       <div class="projects-list" id="projects-list">
         ${projectGrid(projects)}
       </div>
     </div>
   `;
+}
+
+function statusFilterBar() {
+  return `
+    <div class="flex flex-wrap gap-2 mb-4">
+      <button type="button" class="tag filter-status ${!statusFilter ? 'ring-1 ring-accent' : ''}" data-status="">Tous</button>
+      ${PROJECT_STATUSES.map(s => `
+        <button type="button" class="tag filter-status ${statusFilter === s ? 'ring-1 ring-accent' : ''}" data-status="${s}">${STATUS_LABELS[s]}</button>
+      `).join('')}
+    </div>
+  `;
+}
+
+function applyFilters(list) {
+  let result = filterProjects(list, searchQuery);
+  if (statusFilter) {
+    result = result.filter(p => p.status === statusFilter);
+  }
+  return result;
 }
 
 function filterProjects(list, query) {
@@ -50,9 +70,9 @@ function filterProjects(list, query) {
 }
 
 function projectGrid(list) {
-  const filtered = filterProjects(list, searchQuery);
+  const filtered = applyFilters(list);
   if (filtered.length === 0) {
-    return '<p class="text-gray-500 text-sm text-center py-8">Aucun projet ne correspond à votre recherche.</p>';
+    return '<p class="text-gray-500 text-sm text-center py-8">Aucun projet ne correspond à vos critères.</p>';
   }
   return `
     <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -105,16 +125,32 @@ function bindProjectCards() {
   });
 }
 
+function refreshProjectList() {
+  const listEl = document.getElementById('projects-list');
+  if (listEl) {
+    listEl.innerHTML = projectGrid(projects);
+    bindProjectCards();
+  }
+}
+
 export function bindEvents() {
   document.getElementById('btn-new-project')?.addEventListener('click', () => showProjectForm());
 
   document.getElementById('project-search')?.addEventListener('input', (e) => {
     searchQuery = e.target.value;
-    const listEl = document.getElementById('projects-list');
-    if (listEl) {
-      listEl.innerHTML = projectGrid(projects);
-      bindProjectCards();
-    }
+    refreshProjectList();
+  });
+
+  document.querySelectorAll('.filter-status').forEach(btn => {
+    btn.addEventListener('click', () => {
+      statusFilter = btn.dataset.status;
+      document.querySelectorAll('.filter-status').forEach(b => {
+        const active = b.dataset.status === statusFilter;
+        b.classList.toggle('ring-1', active);
+        b.classList.toggle('ring-accent', active);
+      });
+      refreshProjectList();
+    });
   });
 
   bindProjectCards();
@@ -187,8 +223,8 @@ function showProjectForm(project = null) {
           <input class="input-field" name="live_url" type="url" value="${escapeHtml(project?.live_url || '')}" placeholder="https://monsite.com">
         </div>
         <div>
-          <label class="label-field">Lien GitHub</label>
-          <input class="input-field" name="github_url" type="url" value="${escapeHtml(project?.github_url || '')}" placeholder="https://github.com/...">
+          <label class="label-field">Lien GitHub ou Vercel</label>
+          <input class="input-field" name="github_url" type="url" value="${escapeHtml(project?.github_url || '')}" placeholder="https://github.com/... ou https://....vercel.app">
         </div>
         ${progressControl('progress', project?.progress || 0)}
         <div class="flex items-center gap-2">
@@ -289,7 +325,7 @@ async function showProjectDetail(id) {
           <div><span class="text-gray-500">Prix final</span><p class="text-accent-hover font-medium">${formatCurrency(project.amount)}</p></div>
           <div class="col-span-2"><span class="text-gray-500">Technologies</span><p class="text-gray-200">${(project.technologies || []).join(', ') || '—'}</p></div>
           ${project.live_url ? `<div class="col-span-2"><span class="text-gray-500">Lien du projet</span><p><a href="${escapeHtml(project.live_url)}" target="_blank" rel="noopener" class="text-accent-hover text-sm break-all">${escapeHtml(project.live_url)}</a></p></div>` : ''}
-          ${project.github_url ? `<div class="col-span-2"><span class="text-gray-500">GitHub</span><p><a href="${escapeHtml(project.github_url)}" target="_blank" rel="noopener" class="text-accent-hover text-sm break-all">${escapeHtml(project.github_url)}</a></p></div>` : ''}
+          ${project.github_url ? `<div class="col-span-2"><span class="text-gray-500">GitHub / Vercel</span><p><a href="${escapeHtml(project.github_url)}" target="_blank" rel="noopener" class="text-accent-hover text-sm break-all">${escapeHtml(project.github_url)}</a></p></div>` : ''}
         </div>
 
         ${project.description ? `<div><span class="text-gray-500 text-sm">Description</span><p class="text-gray-300 text-sm mt-1">${escapeHtml(project.description)}</p></div>` : ''}

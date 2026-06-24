@@ -5,6 +5,7 @@
 --   1. migration_v3.sql  (user_id, RLS, progress, github_url, live_url…)
 --   2. migration_v2.sql  (deadline, is_active, pinned — fonctionnalités app)
 --   3. migration_v4.sql  (statut début, champ estimation)
+--   4. migration_v5.sql  (profil personnel — page À propos)
 -- Ne ré-exécutez PAS ce fichier sur une base déjà peuplée.
 
 -- Projets
@@ -101,6 +102,28 @@ CREATE TABLE IF NOT EXISTS app_ideas (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Profil personnel (page À propos)
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) DEFAULT auth.uid() NOT NULL UNIQUE,
+  last_name TEXT DEFAULT '',
+  post_name TEXT DEFAULT '',
+  first_name TEXT DEFAULT '',
+  gender TEXT DEFAULT '',
+  birth_date DATE,
+  address TEXT DEFAULT '',
+  country TEXT DEFAULT '',
+  phone TEXT DEFAULT '',
+  education_level TEXT DEFAULT '',
+  objectives TEXT DEFAULT '',
+  portfolio_url TEXT DEFAULT '',
+  voter_card_image TEXT DEFAULT '',
+  diploma_image TEXT DEFAULT '',
+  transcript_image TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Index
 CREATE INDEX IF NOT EXISTS idx_projects_user_id         ON projects(user_id);
 CREATE INDEX IF NOT EXISTS idx_project_logs_project_id  ON project_logs(project_id);
@@ -113,6 +136,7 @@ CREATE INDEX IF NOT EXISTS idx_templates_user_id        ON templates(user_id);
 CREATE INDEX IF NOT EXISTS idx_resources_user_id        ON resources(user_id);
 CREATE INDEX IF NOT EXISTS idx_technical_notes_user_id  ON technical_notes(user_id);
 CREATE INDEX IF NOT EXISTS idx_app_ideas_user_id        ON app_ideas(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id    ON user_profiles(user_id);
 
 -- RLS — chaque utilisateur accède uniquement à ses données
 ALTER TABLE projects         ENABLE ROW LEVEL SECURITY;
@@ -122,6 +146,7 @@ ALTER TABLE templates        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resources        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE technical_notes  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_ideas        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_profiles    ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "owner_projects"         ON projects         FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "owner_project_logs"     ON project_logs     FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
@@ -130,3 +155,4 @@ CREATE POLICY "owner_templates"        ON templates        FOR ALL USING (auth.u
 CREATE POLICY "owner_resources"        ON resources        FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "owner_technical_notes"  ON technical_notes  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "owner_app_ideas"        ON app_ideas        FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "owner_user_profiles"    ON user_profiles    FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
