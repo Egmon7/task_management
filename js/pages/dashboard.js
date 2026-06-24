@@ -38,7 +38,7 @@ export async function render() {
     <div class="space-y-6">
       ${activeProject ? activeProjectCard(activeProject) : ''}
 
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 dashboard-stats">
         ${statCard('Total projets', total, 'folder', 'text-white', 'text-gray-400')}
         ${statCard('En cours', enCours, 'refresh', 'text-blue-400', 'text-blue-400')}
         ${statCard('Terminés', termines, 'check-circle', 'text-green-400', 'text-green-400')}
