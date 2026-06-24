@@ -117,6 +117,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   education_level TEXT DEFAULT '',
   objectives TEXT DEFAULT '',
   portfolio_url TEXT DEFAULT '',
+  cv_image TEXT DEFAULT '',
   voter_card_image TEXT DEFAULT '',
   diploma_image TEXT DEFAULT '',
   transcript_image TEXT DEFAULT '',

@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   education_level TEXT DEFAULT '',
   objectives TEXT DEFAULT '',
   portfolio_url TEXT DEFAULT '',
+  cv_image TEXT DEFAULT '',
   voter_card_image TEXT DEFAULT '',
   diploma_image TEXT DEFAULT '',
   transcript_image TEXT DEFAULT '',
@@ -29,3 +30,6 @@ ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "owner_user_profiles" ON user_profiles;
 CREATE POLICY "owner_user_profiles" ON user_profiles
   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- Si vous aviez déjà exécuté une version antérieure de v5 :
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS cv_image TEXT DEFAULT '';

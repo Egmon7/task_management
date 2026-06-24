@@ -116,6 +116,7 @@ export function openModal(title, bodyHtml, footerHtml = '') {
 }
 
 export function closeModal() {
+  document.getElementById('modal')?.classList.remove('modal-panel--wide');
   document.getElementById('modal-overlay').classList.add('hidden');
 }
 
@@ -155,16 +156,37 @@ export function readImageFile(file, maxWidth = 900) {
   });
 }
 
-export function imagePreviewField(id, label, currentUrl = '') {
-  const hasImage = !!currentUrl;
+export function readDocumentFile(file, maxMb = 2) {
+  if (!file) return Promise.reject(new Error('Aucun fichier'));
+  if (file.size > maxMb * 1024 * 1024) {
+    return Promise.reject(new Error(`Fichier trop volumineux (max ${maxMb} Mo)`));
+  }
+  if (file.type.startsWith('image/')) return readImageFile(file);
+  if (file.type === 'application/pdf') {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Lecture du PDF impossible'));
+      reader.readAsDataURL(file);
+    });
+  }
+  return Promise.reject(new Error('Image ou PDF uniquement'));
+}
+
+export function imagePreviewField(id, label, currentUrl = '', accept = 'image/*') {
+  const hasFile = !!currentUrl;
+  const isPdf = currentUrl.startsWith('data:application/pdf');
   return `
     <div class="photo-field" data-photo-field="${id}">
       <label class="label-field">${label}</label>
-      <input type="file" accept="image/*" class="input-field photo-input" id="${id}-file" data-target="${id}">
-      ${hasImage ? `
+      <input type="file" accept="${accept}" class="input-field photo-input" id="${id}-file" data-target="${id}" data-doc="${accept.includes('pdf') ? '1' : ''}">
+      ${hasFile ? `
         <div class="photo-preview mt-2" id="${id}-preview">
-          <img src="${currentUrl}" alt="${escapeHtml(label)}">
-          <button type="button" class="btn-ghost text-xs text-red-400 mt-1 remove-photo" data-target="${id}">Supprimer la photo</button>
+          ${isPdf
+            ? `<a href="${currentUrl}" download="document.pdf" class="btn-secondary text-xs inline-flex">Télécharger le fichier</a>`
+            : `<img src="${currentUrl}" alt="${escapeHtml(label)}">`
+          }
+          <button type="button" class="btn-ghost text-xs text-red-400 mt-1 block remove-photo" data-target="${id}">Supprimer</button>
         </div>
       ` : `<div class="photo-preview mt-2 hidden" id="${id}-preview"></div>`}
     </div>
